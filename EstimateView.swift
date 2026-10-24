@@ -25,6 +25,27 @@ struct EstimateView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("How this is calculated") {
+                HStack {
+                    Text("Material recovery")
+                    Spacer()
+                    Text("Rs \(result.materialValue)").foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("Reuse and handling")
+                    Spacer()
+                    Text("Rs \(result.reuseValue)").foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("Condition (\(condition.rawValue))")
+                    Spacer()
+                    Text("\(Int(condition.factor * 100))%").foregroundStyle(.secondary)
+                }
+                Text("Estimate = (material + reuse) × condition, then ±20%. Recycler rate cards and local prices vary, so treat this as a guide.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("What's likely inside") {
                 ForEach(deviceParts) { part in
                     HStack {
