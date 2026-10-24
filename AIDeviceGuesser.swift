@@ -20,7 +20,7 @@ enum AIDeviceGuesser {
 @available(iOS 26.0, *)
 @Generable
 struct DeviceGuess {
-    @Guide(description: "One of: Router, Mobile Phone, Circuit Board, Battery, Unknown")
+    @Guide(description: "One of: Mobile Phone, Laptop, Router, Circuit Board, Battery, Desktop PC, Tablet, Monitor, Television, Printer, Keyboard, Mouse, Headphones, Speaker, Camera, Game Console, Power Supply, Cables & Chargers, Set-top Box, Smartwatch, Hard Drive, UPS / Inverter, Unknown")
     var device: String
 
     @Guide(description: "Confidence between 0 and 1")
@@ -53,7 +53,7 @@ enum FoundationDeviceGuesser {
             )
             let result = response.content
             guard result.confidence >= 0.5 else { return nil }
-            if let exact = DeviceType(rawValue: result.device) { return exact }
+            if let direct = DeviceType.fromGeminiID(result.device) { return direct }
             return EstimateEngine.match(label: result.device)
         } catch {
             return nil
