@@ -5,6 +5,9 @@ struct ScanView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var image: UIImage?
     @State private var labels: [DetectedLabel] = []
+    @State private var ocrText = ""
+    @State private var modelMatch: ModelMatch?
+    @State private var detectionSource: String?
     @State private var isAnalyzing = false
     @State private var device: DeviceType?
     @State private var autoDetected = false
@@ -38,6 +41,16 @@ struct ScanView: View {
                 Section("Device") {
                     if autoDetected, let device {
                         Label("Looks like: \(device.rawValue)", systemImage: "checkmark.seal")
+                        if let modelMatch, modelMatch.device == device, modelMatch.name != device.rawValue {
+                            Text("Matched model: \(modelMatch.name)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let detectionSource {
+                            Text(detectionSource)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     } else {
                         Text("Not sure what this is. Try a clearer photo, or pick the device type yourself.")
                             .foregroundStyle(.orange)
@@ -60,7 +73,9 @@ struct ScanView: View {
                 Section {
                     if let device {
                         NavigationLink("See estimate") {
-                            EstimateView(device: device, condition: condition)
+                            EstimateView(device: device,
+                                         condition: condition,
+                                         parts: modelMatch?.device == device ? modelMatch?.parts : nil)
                         }
                     }
                 }
@@ -75,6 +90,15 @@ struct ScanView: View {
                                     Text("\(Int(label.confidence * 100))%").foregroundStyle(.secondary)
                                 }
                             }
+                        }
+                    }
+                }
+
+                if !ocrText.isEmpty {
+                    Section {
+                        DisclosureGroup("Text on the item") {
+                            Text(ocrText)
+                                .font(.footnote)
                         }
                     }
                 }
@@ -93,20 +117,42 @@ struct ScanView: View {
 
         image = uiImage
         device = nil
+        modelMatch = nil
+        detectionSource = nil
         autoDetected = false
         isAnalyzing = true
 
-        let found = await VisionClassifier.classify(uiImage)
-        labels = found
+        let foundLabels = await VisionClassifier.classify(uiImage)
+        let recognizedText = await VisionClassifier.recognizeText(uiImage)
 
-        // Take the first confident label that maps to a device we know
-        for label in found where label.confidence >= EstimateEngine.minConfidence {
+        labels = foundLabels
+        ocrText = recognizedText
+
+        if let match = ModelLookup.match(recognizedText) {
+            device = match.device
+            modelMatch = match
+            autoDetected = true
+            detectionSource = "Identified from the label text."
+        } else if let labelDevice = firstConfidentDevice(in: foundLabels) {
+            device = labelDevice
+            autoDetected = true
+            detectionSource = "Identified from the photo."
+        } else if let aiDevice = await AIDeviceGuesser.guess(labels: foundLabels.map(\.name),
+                                                             ocr: recognizedText) {
+            device = aiDevice
+            autoDetected = true
+            detectionSource = "Identified by the on-device AI."
+        }
+
+        isAnalyzing = false
+    }
+
+    private func firstConfidentDevice(in labels: [DetectedLabel]) -> DeviceType? {
+        for label in labels where label.confidence >= EstimateEngine.minConfidence {
             if let match = EstimateEngine.match(label: label.name) {
-                device = match
-                autoDetected = true
-                break
+                return match
             }
         }
-        isAnalyzing = false
+        return nil
     }
 }

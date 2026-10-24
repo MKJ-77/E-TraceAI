@@ -108,9 +108,9 @@ enum EstimateEngine {
     static let minConfidence: Float = 0.30
 
     // Value = sum(part weight x material rate) x condition factor, shown as a range
-    static func estimate(device: DeviceType, condition: Condition) -> EstimateResult {
+    static func estimate(device: DeviceType, condition: Condition, parts: [Part]? = nil) -> EstimateResult {
         var base = 0.0
-        for part in device.parts {
+        for part in (parts ?? device.parts) {
             base += (part.grams / 1000.0) * part.material.ratePerKg
         }
         let adjusted = base * condition.factor

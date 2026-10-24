@@ -5,13 +5,15 @@ import CoreImage.CIFilterBuiltins
 struct EstimateView: View {
     let device: DeviceType
     let condition: Condition
+    var parts: [Part]? = nil
 
     @Environment(\.modelContext) private var modelContext
     @State private var estimateID = UUID()
     @State private var droppedOff = false
 
     var body: some View {
-        let result = EstimateEngine.estimate(device: device, condition: condition)
+        let result = EstimateEngine.estimate(device: device, condition: condition, parts: parts)
+        let deviceParts = parts ?? device.parts
 
         List {
             Section("Estimated value") {
@@ -24,7 +26,7 @@ struct EstimateView: View {
             }
 
             Section("What's likely inside") {
-                ForEach(device.parts) { part in
+                ForEach(deviceParts) { part in
                     HStack {
                         Text(part.name)
                         Spacer()

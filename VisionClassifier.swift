@@ -34,6 +34,29 @@ enum VisionClassifier {
         return raw.map { DetectedLabel(name: $0.0, confidence: $0.1) }
     }
 
+    static func recognizeText(_ image: UIImage) async -> String {
+        guard let cgImage = image.cgImage else { return "" }
+        let orientation = cgOrientation(from: image.imageOrientation)
+
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNRecognizeTextRequest()
+                request.recognitionLevel = .accurate
+                request.usesLanguageCorrection = true
+                let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+                do {
+                    try handler.perform([request])
+                    let text = (request.results ?? [])
+                        .compactMap { $0.topCandidates(1).first?.string }
+                        .joined(separator: " ")
+                    continuation.resume(returning: text)
+                } catch {
+                    continuation.resume(returning: "")
+                }
+            }
+        }
+    }
+
     private static func cgOrientation(from o: UIImage.Orientation) -> CGImagePropertyOrientation {
         switch o {
         case .up: return .up
